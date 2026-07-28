@@ -499,7 +499,7 @@ class LibraryDialog(wx.Dialog, ListBoxNavigationMixin):
 		# Remove button
 		self.remove= wx.Button(panel, wx.ID_ANY,
 		# Translators: Label of Remove button
-		_("Remove library"))
+		_("Remove library (Del)"))
 		self.remove.Bind(wx.EVT_BUTTON, self.onRemove)
 		buttonSizer.Add(self.remove, 1,wx.ALL, 10)
 

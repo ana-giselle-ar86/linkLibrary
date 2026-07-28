@@ -160,7 +160,7 @@ class MyPopupMenu(wx.Menu):
 			#Remove sub library  menu
 			self.removeSublibrary= wx.MenuItem(self, -1, 
 			# Translators: label of menu items to remove a sub library.
-			_('Remove Sub library'))
+			_('Remove Sub library\tDel'))
 			self.Append(self.removeSublibrary)
 			self.Bind(wx.EVT_MENU, self.onRemoveSublibrary, self.removeSublibrary)
 
@@ -224,7 +224,7 @@ class MyPopupMenu(wx.Menu):
 			#Remove Selected Link menu
 			remove= wx.MenuItem(self, -1, 
 			# Translators: label of menu items to remove a link.
-			_('Remove Selected link'))
+			_('Remove Selected link\tDel'))
 			self.Append(remove)
 			self.Bind(wx.EVT_MENU, self.onRemove, remove)
 
@@ -507,10 +507,7 @@ class ListBoxNavigationMixin:
 	"""
 	A reusable mixin that adds incremental keyboard navigation to wx.ListBox controls,
 	similar to Windows File Explorer.
-	Features:
-	- Pressing a printable key jumps to the first item starting with that character.
-	- Typing multiple characters quickly (within ~1 second) builds a search buffer
-	  and navigates to items starting with that sequence.
+	and supports deleting items with the Delete key.
 	  """
 	def __init__(self, *args, **kwargs):
 		super().__init__(*args, **kwargs)  # safe for mixins
@@ -523,6 +520,8 @@ class ListBoxNavigationMixin:
 	# Attach the navigation handler to the given listbox.
 	def bind_navigation(self, listbox):
 		listbox.Bind(wx.EVT_CHAR, self.on_char)
+		listbox.Bind(wx.EVT_KEY_DOWN, self.on_key_down)  # handle Delete key
+
 
 	def on_char(self, event):
 		key = event.GetKeyCode()
@@ -556,6 +555,33 @@ class ListBoxNavigationMixin:
 					listbox.EnsureVisible(idx)
 					#log.info(f'match: {self._search_buffer} at {idx}')
 					break
+		else:
+			event.Skip()
+
+	def on_key_down(self, event):
+		key = event.GetKeyCode()
+		if key in (wx.WXK_DELETE, wx.WXK_NUMPAD_DELETE):
+			listbox = event.GetEventObject()
+			item= listbox.GetStringSelection()
+			if not item:
+				return
+			# climb up until we find the dialog
+			parent = listbox.GetParent()
+			while parent and not isinstance(parent, wx.Dialog):
+				parent = parent.GetParent()
+
+			if parent:
+				# Case 1: LibraryDialog has its own onRemove
+				if hasattr(parent, "onRemove"):
+					parent.onRemove(event)
+				else:
+					# Case 2: LinkDialog uses MyPopupMenu
+					menu = MyPopupMenu(parent, listbox.GetId())
+					if isSublibrary(item): # it is a sublibrary
+						menu.onRemoveSublibrary(event)
+					else: # it is a link
+						menu.onRemove(event)
+					menu.Destroy()
 		else:
 			event.Skip()
 
